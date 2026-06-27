@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { completeQuest, fetchTodayQuests, type ActivityType } from "@/lib/addXP";
 import { xpProgress } from "@/lib/level";
 import XPDisplay from "@/components/XPDisplay";
 import QuestCard from "@/components/QuestCard";
-
-const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 interface Profile {
   xp: number;
@@ -28,6 +27,8 @@ const QUESTS: {
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState<Record<ActivityType, boolean>>({
@@ -47,20 +48,20 @@ export default function DashboardPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const { error: upsertError } = await supabase
-          .from("profiles")
-          .upsert({ id: DEMO_USER_ID, xp: 0, level: 1, streak: 0 }, { onConflict: "id" });
+        // Get the authenticated user
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        if (upsertError) {
-          setError(`Upsert error: ${upsertError.message}`);
-          setLoading(false);
+        if (authError || !user) {
+          router.replace("/login");
           return;
         }
+
+        setUserId(user.id);
 
         const { data, error: fetchError } = await supabase
           .from("profiles")
           .select("xp, level, streak, last_active_date")
-          .eq("id", DEMO_USER_ID)
+          .eq("id", user.id)
           .single();
 
         if (fetchError) {
@@ -71,7 +72,7 @@ export default function DashboardPage() {
 
         setProfile(data);
 
-        const questData = await fetchTodayQuests(DEMO_USER_ID);
+        const questData = await fetchTodayQuests(user.id);
         setCompleted({
           comic: questData.comic,
           reading: questData.reading,
@@ -86,7 +87,7 @@ export default function DashboardPage() {
     };
 
     init();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     return () => {
@@ -96,23 +97,24 @@ export default function DashboardPage() {
   }, []);
 
   const fetchProfile = async () => {
+    if (!userId) return;
     const { data } = await supabase
       .from("profiles")
       .select("xp, level, streak, last_active_date")
-      .eq("id", DEMO_USER_ID)
+      .eq("id", userId)
       .single();
     setProfile(data);
   };
 
   const handleComplete = async (quest: (typeof QUESTS)[number]) => {
-    if (completed[quest.activity] || processing) return;
+    if (!userId || completed[quest.activity] || processing) return;
 
     setProcessing(quest.activity);
     setXpMessage(null);
     setLevelUp(false);
     setStreakMessage(null);
 
-    const result = await completeQuest(DEMO_USER_ID, quest.activity);
+    const result = await completeQuest(userId, quest.activity);
 
     if (result.error) {
       setXpMessage(result.error);
