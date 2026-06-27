@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     const check = async () => {
@@ -55,29 +56,39 @@ export default function RegisterPage() {
       return;
     }
 
-    if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").upsert(
-        {
-          id: data.user.id,
-          xp: 0,
-          level: 1,
-          streak: 0,
-        },
-        { onConflict: "id" }
-      );
-
-      if (profileError) {
-        console.error("Profile creation error:", profileError);
-      }
+    if (data.session) {
+      router.push("/dashboard");
+    } else if (data.user) {
+      setSuccess(true);
     }
 
-    router.push("/dashboard");
+    setLoading(false);
   };
 
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] px-4">
+        <div className="w-full max-w-md text-center space-y-6">
+          <h1 className="text-3xl font-bold text-white">Check Your Email</h1>
+          <p className="text-zinc-400">
+            We sent a confirmation link to <span className="text-white font-medium">{email}</span>.
+            Click the link to activate your account.
+          </p>
+          <Link
+            href="/login"
+            className="inline-block rounded-xl bg-purple-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-purple-500"
+          >
+            Back to Sign In
+          </Link>
+        </div>
       </div>
     );
   }
