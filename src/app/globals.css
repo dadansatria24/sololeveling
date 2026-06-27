@@ -1,18 +1,633 @@
 @import "tailwindcss";
 
+/* ============================================
+   Dynasty Warriors — Skill Tree Design System
+   ============================================ */
+
 :root {
-  --background: #0a0a0f;
+  /* Core Background */
+  --bg-deep: #06060c;
+  --bg-surface: #0c0c18;
+  --bg-card: #111125;
+
+  /* Gold / Dynasty Warriors accent */
+  --gold-100: #fff7e0;
+  --gold-300: #ffd666;
+  --gold-400: #f5b731;
+  --gold-500: #d4991a;
+  --gold-600: #b07d10;
+  --gold-700: #8a6008;
+  --gold-glow: rgba(245, 183, 49, 0.45);
+
+  /* Energy / XP Purple-Blue */
+  --energy-300: #a78bfa;
+  --energy-400: #8b5cf6;
+  --energy-500: #7c3aed;
+  --energy-600: #6d28d9;
+  --energy-glow: rgba(139, 92, 246, 0.5);
+
+  /* Blood Red accent */
+  --blood-400: #f87171;
+  --blood-500: #ef4444;
+  --blood-glow: rgba(239, 68, 68, 0.35);
+
+  /* Neutral tones */
+  --steel-300: #cbd5e1;
+  --steel-400: #94a3b8;
+  --steel-500: #64748b;
+  --steel-600: #475569;
+  --steel-700: #334155;
+  --steel-800: #1e293b;
+  --steel-900: #0f172a;
+
+  /* Status */
+  --status-locked: #2a2a3e;
+  --status-available: var(--energy-400);
+  --status-completed: var(--gold-400);
+
+  --background: var(--bg-deep);
   --foreground: #ededed;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-rajdhani);
   --font-mono: var(--font-geist-mono);
 }
 
+/* ============================================
+   Base Styles
+   ============================================ */
+
 body {
-  background: var(--background);
+  background: var(--bg-deep);
   color: var(--foreground);
+  overflow-x: hidden;
+}
+
+/* Cinematic vignette overlay */
+.bg-vignette {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 100%, rgba(245, 183, 49, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.6) 100%),
+    var(--bg-deep);
+}
+
+/* ============================================
+   Keyframe Animations
+   ============================================ */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px 2px var(--energy-glow), 0 0 20px 4px rgba(139, 92, 246, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 16px 6px var(--energy-glow), 0 0 36px 10px rgba(139, 92, 246, 0.25);
+  }
+}
+
+@keyframes gold-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px 2px var(--gold-glow), 0 0 20px 4px rgba(245, 183, 49, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 18px 8px var(--gold-glow), 0 0 40px 12px rgba(245, 183, 49, 0.25);
+  }
+}
+
+@keyframes node-activate {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  30% {
+    transform: scale(1.2);
+    filter: brightness(1.8);
+  }
+  60% {
+    transform: scale(0.95);
+    filter: brightness(1.2);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes energy-flow {
+  0% {
+    stroke-dashoffset: 40;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes energy-flow-reverse {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes xp-burst {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px) scale(1.3);
+  }
+}
+
+@keyframes level-up-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ring-expand {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) translateX(20px) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   Animation Utility Classes
+   ============================================ */
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.animate-gold-pulse {
+  animation: gold-pulse 2s ease-in-out infinite;
+}
+
+.animate-node-activate {
+  animation: node-activate 0.6s ease-out forwards;
+}
+
+.animate-energy-flow {
+  animation: energy-flow 1.5s linear infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-xp-burst {
+  animation: xp-burst 1.2s ease-out forwards;
+}
+
+.animate-level-up {
+  animation: level-up-flash 0.8s ease-out forwards;
+}
+
+.animate-ring-expand {
+  animation: ring-expand 1s ease-out forwards;
+}
+
+/* ============================================
+   Skill Node Styles
+   ============================================ */
+
+.skill-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.skill-node__circle {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  border: 3px solid var(--steel-700);
+  background: var(--bg-card);
+}
+
+.skill-node--locked .skill-node__circle {
+  border-color: var(--steel-800);
+  background: var(--status-locked);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.skill-node--available .skill-node__circle {
+  border-color: var(--energy-400);
+  background: linear-gradient(135deg, var(--bg-card), rgba(139, 92, 246, 0.1));
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.skill-node--available:hover .skill-node__circle {
+  border-color: var(--energy-300);
+  transform: scale(1.08);
+  box-shadow: 0 0 24px 8px var(--energy-glow), 0 0 48px 16px rgba(139, 92, 246, 0.15);
+}
+
+.skill-node--available:active .skill-node__circle {
+  transform: scale(0.96);
+}
+
+.skill-node--completed .skill-node__circle {
+  border-color: var(--gold-400);
+  background: linear-gradient(135deg, rgba(245, 183, 49, 0.15), rgba(212, 153, 26, 0.08));
+  animation: gold-pulse 2s ease-in-out infinite;
+}
+
+.skill-node--activating .skill-node__circle {
+  animation: node-activate 0.6s ease-out forwards;
+}
+
+.skill-node__icon {
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+}
+
+.skill-node--completed .skill-node__icon {
+  filter: drop-shadow(0 0 8px var(--gold-glow));
+}
+
+.skill-node__label {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--steel-400);
+  transition: color 0.3s ease;
+}
+
+.skill-node--available .skill-node__label {
+  color: var(--steel-300);
+}
+
+.skill-node--completed .skill-node__label {
+  color: var(--gold-300);
+}
+
+.skill-node__xp {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.skill-node--available .skill-node__xp {
+  color: var(--energy-300);
+}
+
+.skill-node--completed .skill-node__xp {
+  color: var(--gold-500);
+}
+
+/* Checkmark overlay for completed nodes */
+.skill-node__check {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gold-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--bg-deep);
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+/* ============================================
+   Connector Lines
+   ============================================ */
+
+.connector-line {
+  stroke: var(--steel-800);
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.5s ease;
+}
+
+.connector-line--active {
+  stroke: var(--gold-400);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px var(--gold-glow));
+  stroke-dasharray: 8 4;
+  animation: energy-flow 1.5s linear infinite;
+}
+
+.connector-line--available {
+  stroke: var(--energy-400);
+  stroke-width: 2;
+  opacity: 0.5;
+  stroke-dasharray: 4 6;
+  animation: energy-flow-reverse 2s linear infinite;
+}
+
+/* ============================================
+   Rank Badge
+   ============================================ */
+
+.rank-badge {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rank-badge__ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.rank-badge__ring svg {
+  transform: rotate(-90deg);
+}
+
+.rank-badge__progress-track {
+  fill: none;
+  stroke: var(--steel-800);
+  stroke-width: 5;
+}
+
+.rank-badge__progress-fill {
+  fill: none;
+  stroke: url(#xp-gradient);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease-out;
+  filter: drop-shadow(0 0 6px var(--energy-glow));
+}
+
+.rank-badge__level {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-badge__level-number {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px var(--gold-glow));
+}
+
+.rank-badge__rank-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 8px;
+  background: linear-gradient(90deg, var(--gold-600), var(--gold-300), var(--gold-600));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ============================================
+   HUD Elements
+   ============================================ */
+
+.hud-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--steel-800);
+  background: rgba(17, 17, 37, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.hud-stat__value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.hud-stat__label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+  color: var(--steel-500);
+}
+
+/* ============================================
+   Toast / Notification
+   ============================================ */
+
+.xp-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 12px 28px;
+  border-radius: 12px;
+  border: 1px solid var(--gold-700);
+  background: linear-gradient(135deg, rgba(17, 17, 37, 0.95), rgba(245, 183, 49, 0.08));
+  backdrop-filter: blur(12px);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold-300);
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 12px var(--gold-glow);
+  animation: fade-in-up 0.4s ease-out;
+}
+
+.streak-toast {
+  border-color: var(--blood-500);
+  background: linear-gradient(135deg, rgba(17, 17, 37, 0.95), rgba(239, 68, 68, 0.08));
+  color: var(--blood-400);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 12px var(--blood-glow);
+}
+
+/* ============================================
+   Level Up Overlay
+   ============================================ */
+
+.level-up-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(245, 183, 49, 0.1), rgba(6, 6, 12, 0.92) 60%);
+  backdrop-filter: blur(4px);
+}
+
+.level-up-overlay__text {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, var(--gold-100), var(--gold-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px var(--gold-glow));
+  animation: level-up-flash 0.8s ease-out forwards;
+}
+
+.level-up-overlay__subtitle {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gold-500);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: fade-in-up 0.6s ease-out 0.3s both;
+}
+
+.level-up-overlay__ring {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-400);
+  animation: ring-expand 1.2s ease-out forwards;
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--steel-700);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--steel-600);
+}
+
+/* ============================================
+   Loading Spinner
+   ============================================ */
+
+.spinner-warrior {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--steel-800);
+  border-top-color: var(--gold-400);
+  animation: spin-slow 1s linear infinite;
 }

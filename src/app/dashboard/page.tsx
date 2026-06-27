@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { completeQuest, fetchTodayQuests, type ActivityType } from "@/lib/addXP";
 import { xpProgress } from "@/lib/level";
-import XPDisplay from "@/components/XPDisplay";
-import QuestCard from "@/components/QuestCard";
+import SkillTree from "@/components/SkillTree";
 
 interface Profile {
   xp: number;
@@ -21,10 +20,19 @@ const QUESTS: {
   xp: number;
   icon: string;
 }[] = [
-  { label: "Complete Comic", activity: "comic", xp: 20, icon: "📖" },
-  { label: "Complete Reading", activity: "reading", xp: 30, icon: "📚" },
-  { label: "Complete Listening", activity: "listening", xp: 25, icon: "🎧" },
+  { label: "Comic", activity: "comic", xp: 20, icon: "📖" },
+  { label: "Reading", activity: "reading", xp: 30, icon: "📚" },
+  { label: "Listening", activity: "listening", xp: 25, icon: "🎧" },
 ];
+
+const RANK_NAMES: Record<number, string> = {
+  1: "Recruit",
+  2: "Knight-Errant",
+  3: "Adept",
+  4: "Expert",
+  5: "Master",
+  6: "Musou",
+};
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -39,16 +47,17 @@ export default function DashboardPage() {
   const [processing, setProcessing] = useState<ActivityType | null>(null);
   const [xpMessage, setXpMessage] = useState<string | null>(null);
   const [levelUp, setLevelUp] = useState(false);
+  const [newLevelValue, setNewLevelValue] = useState(0);
   const [streakMessage, setStreakMessage] = useState<string | null>(null);
   const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const levelUpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
       try {
-        // Get the authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
@@ -93,6 +102,7 @@ export default function DashboardPage() {
     return () => {
       if (messageTimer.current) clearTimeout(messageTimer.current);
       if (streakTimer.current) clearTimeout(streakTimer.current);
+      if (levelUpTimer.current) clearTimeout(levelUpTimer.current);
     };
   }, []);
 
@@ -120,15 +130,20 @@ export default function DashboardPage() {
       setXpMessage(result.error);
     } else {
       setCompleted((prev) => ({ ...prev, [quest.activity]: true }));
-      setXpMessage(`+${result.data!.gained} XP earned!`);
+      setXpMessage(`+${result.data!.gained} XP`);
 
-      if (result.data!.leveledUp) setLevelUp(true);
+      if (result.data!.leveledUp) {
+        setNewLevelValue(result.data!.level);
+        setLevelUp(true);
+        if (levelUpTimer.current) clearTimeout(levelUpTimer.current);
+        levelUpTimer.current = setTimeout(() => setLevelUp(false), 3500);
+      }
 
       if (result.data!.streakChanged) {
         const s = result.data!.streak;
-        if (s === 3) setStreakMessage("3 day streak! +50 bonus XP!");
-        else if (s === 7) setStreakMessage("7 day streak! +150 bonus XP!");
-        else setStreakMessage(`${s} day streak!`);
+        if (s === 3) setStreakMessage("🔥 3 Day Streak! +50 Bonus XP!");
+        else if (s === 7) setStreakMessage("🔥 7 Day Streak! +150 Bonus XP!");
+        else setStreakMessage(`🔥 ${s} Day Streak!`);
 
         if (streakTimer.current) clearTimeout(streakTimer.current);
         streakTimer.current = setTimeout(() => setStreakMessage(null), 4000);
@@ -141,27 +156,33 @@ export default function DashboardPage() {
     if (messageTimer.current) clearTimeout(messageTimer.current);
     messageTimer.current = setTimeout(() => {
       setXpMessage(null);
-      setLevelUp(false);
-    }, 4000);
+    }, 3000);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace("/login");
+  };
+
+  // --- Loading State ---
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
+      <div className="flex min-h-screen items-center justify-center bg-vignette">
         <div className="text-center space-y-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent mx-auto" />
-          <p className="text-zinc-400 text-sm">Loading...</p>
+          <div className="spinner-warrior mx-auto" />
+          <p className="text-sm" style={{ color: "var(--steel-500)" }}>Loading quest data...</p>
         </div>
       </div>
     );
   }
 
+  // --- Error State ---
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] px-4">
+      <div className="flex min-h-screen items-center justify-center bg-vignette px-4">
         <div className="text-center space-y-4 max-w-md">
-          <p className="text-red-400 text-sm">{error}</p>
-          <p className="text-zinc-500 text-xs">Check env vars and RLS settings.</p>
+          <p className="text-sm" style={{ color: "var(--blood-400)" }}>{error}</p>
+          <p className="text-xs" style={{ color: "var(--steel-500)" }}>Check env vars and RLS settings.</p>
         </div>
       </div>
     );
@@ -171,71 +192,119 @@ export default function DashboardPage() {
 
   const progress = xpProgress(profile.xp);
   const allDone = completed.comic && completed.reading && completed.listening;
+  const rankName = RANK_NAMES[profile.level] || `Rank ${profile.level}`;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0a0a0f]">
-      <header className="flex items-center justify-center border-b border-zinc-800 px-6 py-4">
-        <h1 className="text-xl font-bold text-white">Solo Leveling</h1>
+    <div className="flex min-h-screen flex-col bg-vignette">
+      {/* Level Up Overlay */}
+      {levelUp && (
+        <div className="level-up-overlay" onClick={() => setLevelUp(false)}>
+          <div className="level-up-overlay__ring" />
+          <p className="level-up-overlay__text font-[family-name:var(--font-cinzel)]">
+            Level Up!
+          </p>
+          <p className="level-up-overlay__subtitle">
+            You reached {RANK_NAMES[newLevelValue] || `Level ${newLevelValue}`}
+          </p>
+        </div>
+      )}
+
+      {/* XP Toast */}
+      {xpMessage && !levelUp && (
+        <div className="xp-toast">{xpMessage}</div>
+      )}
+
+      {/* Streak Toast */}
+      {streakMessage && !levelUp && !xpMessage && (
+        <div className="xp-toast streak-toast">{streakMessage}</div>
+      )}
+
+      {/* Header / HUD Bar */}
+      <header className="flex items-center justify-between border-b px-4 sm:px-6 py-3" style={{ borderColor: "var(--steel-800)", background: "rgba(6, 6, 12, 0.8)", backdropFilter: "blur(12px)" }}>
+        <h1
+          className="text-lg font-bold tracking-wider font-[family-name:var(--font-cinzel)]"
+          style={{ color: "var(--gold-300)" }}
+        >
+          Solo Leveling
+        </h1>
+
+        <div className="flex items-center gap-4">
+          {/* Streak HUD */}
+          <div className="hud-stat">
+            <span className="hud-stat__value" style={{ color: "var(--blood-400)" }}>
+              {profile.streak}
+            </span>
+            <span className="hud-stat__label">Streak</span>
+          </div>
+
+          {/* Rank HUD */}
+          <div className="hud-stat">
+            <span className="hud-stat__value" style={{ color: "var(--gold-400)" }}>
+              {rankName}
+            </span>
+            <span className="hud-stat__label">Rank</span>
+          </div>
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+            style={{ color: "var(--steel-400)", border: "1px solid var(--steel-800)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--blood-400)";
+              e.currentTarget.style.borderColor = "var(--blood-500)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--steel-400)";
+              e.currentTarget.style.borderColor = "var(--steel-800)";
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center px-4 sm:px-6 py-8 sm:py-10">
-        <div className="w-full max-w-lg space-y-6 sm:space-y-8">
-          <XPDisplay level={profile.level} totalXP={profile.xp} progress={progress} />
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6 text-center">
-              <p className="text-3xl font-bold text-orange-400">{profile.streak}</p>
-              <p className="mt-1 text-xs text-zinc-500">Day Streak</p>
-            </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6 text-center">
-              <p className="text-3xl font-bold text-purple-400">{profile.level}</p>
-              <p className="mt-1 text-xs text-zinc-500">Level</p>
-            </div>
+      {/* Main Content */}
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:py-12">
+        {/* All Done Banner */}
+        {allDone && (
+          <div
+            className="mb-8 px-6 py-3 rounded-xl text-center animate-fade-in-up"
+            style={{
+              border: "1px solid var(--gold-700)",
+              background: "linear-gradient(135deg, rgba(245,183,49,0.08), rgba(212,153,26,0.03))",
+            }}
+          >
+            <p
+              className="text-sm font-bold tracking-wider uppercase font-[family-name:var(--font-cinzel)]"
+              style={{ color: "var(--gold-400)" }}
+            >
+              ⚔️ All Quests Complete ⚔️
+            </p>
+            <p className="text-xs mt-1" style={{ color: "var(--gold-600)" }}>
+              Return tomorrow for new challenges, warrior.
+            </p>
           </div>
+        )}
 
-          {levelUp && (
-            <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-4 text-center animate-pulse">
-              <p className="text-lg font-bold text-purple-400">Level Up!</p>
-              <p className="text-sm text-purple-300/70 mt-1">You reached Level {profile.level}</p>
-            </div>
-          )}
+        {/* Skill Tree */}
+        <SkillTree
+          level={profile.level}
+          totalXP={profile.xp}
+          progress={progress}
+          quests={QUESTS}
+          completed={completed}
+          processing={processing}
+          onComplete={handleComplete}
+        />
 
-          {streakMessage && !levelUp && (
-            <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-center">
-              <p className="text-sm font-medium text-orange-400">{streakMessage}</p>
-            </div>
-          )}
-
-          {xpMessage && !levelUp && !streakMessage && (
-            <div className="rounded-xl bg-purple-500/10 px-4 py-3 text-center text-sm font-medium text-purple-400">
-              {xpMessage}
-            </div>
-          )}
-
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Daily Quests</h2>
-              {allDone && (
-                <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2.5 py-1 rounded-full">
-                  All Complete
-                </span>
-              )}
-            </div>
-            <div className="space-y-3">
-              {QUESTS.map((quest) => (
-                <QuestCard
-                  key={quest.activity}
-                  label={quest.label}
-                  xp={quest.xp}
-                  icon={quest.icon}
-                  completed={completed[quest.activity]}
-                  loading={processing === quest.activity}
-                  onClick={() => handleComplete(quest)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Daily Quests Label */}
+        <p
+          className="mt-10 text-xs font-semibold tracking-widest uppercase"
+          style={{ color: "var(--steel-600)" }}
+        >
+          Daily Quest Tree
+        </p>
       </main>
     </div>
   );
