@@ -42,28 +42,47 @@ export default function DashboardPage() {
   const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const init = async () => {
-      await supabase
-        .from("profiles")
-        .upsert({ id: DEMO_USER_ID, xp: 0, level: 1, streak: 0 }, { onConflict: "id" });
+      try {
+        const { error: upsertError } = await supabase
+          .from("profiles")
+          .upsert({ id: DEMO_USER_ID, xp: 0, level: 1, streak: 0 }, { onConflict: "id" });
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("xp, level, streak, last_active_date")
-        .eq("id", DEMO_USER_ID)
-        .single();
+        if (upsertError) {
+          setError(`Upsert error: ${upsertError.message}`);
+          setLoading(false);
+          return;
+        }
 
-      setProfile(data);
+        const { data, error: fetchError } = await supabase
+          .from("profiles")
+          .select("xp, level, streak, last_active_date")
+          .eq("id", DEMO_USER_ID)
+          .single();
 
-      const questData = await fetchTodayQuests(DEMO_USER_ID);
-      setCompleted({
-        comic: questData.comic,
-        reading: questData.reading,
-        listening: questData.listening,
-      });
+        if (fetchError) {
+          setError(`Fetch error: ${fetchError.message}`);
+          setLoading(false);
+          return;
+        }
 
-      setLoading(false);
+        setProfile(data);
+
+        const questData = await fetchTodayQuests(DEMO_USER_ID);
+        setCompleted({
+          comic: questData.comic,
+          reading: questData.reading,
+          listening: questData.listening,
+        });
+
+        setLoading(false);
+      } catch (e) {
+        setError(`Unexpected: ${e instanceof Error ? e.message : String(e)}`);
+        setLoading(false);
+      }
     };
 
     init();
@@ -130,6 +149,17 @@ export default function DashboardPage() {
         <div className="text-center space-y-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent mx-auto" />
           <p className="text-zinc-400 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] px-4">
+        <div className="text-center space-y-4 max-w-md">
+          <p className="text-red-400 text-sm">{error}</p>
+          <p className="text-zinc-500 text-xs">Check env vars and RLS settings.</p>
         </div>
       </div>
     );
