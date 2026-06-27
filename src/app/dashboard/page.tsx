@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { completeQuest, fetchTodayQuests, type ActivityType } from "@/lib/addXP";
 import { xpProgress } from "@/lib/level";
 import XPDisplay from "@/components/XPDisplay";
 import QuestCard from "@/components/QuestCard";
-import type { User } from "@supabase/supabase-js";
+
+const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 interface Profile {
   xp: number;
@@ -28,8 +28,6 @@ const QUESTS: {
 ];
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState<Record<ActivityType, boolean>>({
@@ -44,34 +42,21 @@ export default function DashboardPage() {
   const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("xp, level, streak, last_active_date")
-      .eq("id", userId)
-      .single();
-
-    setProfile(data);
-  }, []);
-
   useEffect(() => {
     const init = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      await supabase
+        .from("profiles")
+        .upsert({ id: DEMO_USER_ID, xp: 0, level: 1, streak: 0 }, { onConflict: "id" });
 
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      const { data } = await supabase
+        .from("profiles")
+        .select("xp, level, streak, last_active_date")
+        .eq("id", DEMO_USER_ID)
+        .single();
 
-      setUser(user);
+      setProfile(data);
 
-      const [, questData] = await Promise.all([
-        fetchProfile(user.id),
-        fetchTodayQuests(user.id),
-      ]);
-
+      const questData = await fetchTodayQuests(DEMO_USER_ID);
       setCompleted({
         comic: questData.comic,
         reading: questData.reading,
@@ -82,7 +67,7 @@ export default function DashboardPage() {
     };
 
     init();
-  }, [router, fetchProfile]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -91,47 +76,44 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+  const fetchProfile = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("xp, level, streak, last_active_date")
+      .eq("id", DEMO_USER_ID)
+      .single();
+    setProfile(data);
   };
 
   const handleComplete = async (quest: (typeof QUESTS)[number]) => {
-    if (!user || completed[quest.activity] || processing) return;
+    if (completed[quest.activity] || processing) return;
 
-      setProcessing(quest.activity);
-      setXpMessage(null);
-      setLevelUp(false);
-      setStreakMessage(null);
+    setProcessing(quest.activity);
+    setXpMessage(null);
+    setLevelUp(false);
+    setStreakMessage(null);
 
-      const result = await completeQuest(user.id, quest.activity);
+    const result = await completeQuest(DEMO_USER_ID, quest.activity);
 
     if (result.error) {
       setXpMessage(result.error);
     } else {
       setCompleted((prev) => ({ ...prev, [quest.activity]: true }));
-
       setXpMessage(`+${result.data!.gained} XP earned!`);
 
-      if (result.data!.leveledUp) {
-        setLevelUp(true);
-      }
+      if (result.data!.leveledUp) setLevelUp(true);
 
       if (result.data!.streakChanged) {
         const s = result.data!.streak;
-        if (s === 3) {
-          setStreakMessage("3 day streak! +50 bonus XP!");
-        } else if (s === 7) {
-          setStreakMessage("7 day streak! +150 bonus XP!");
-        } else {
-          setStreakMessage(`${s} day streak!`);
-        }
+        if (s === 3) setStreakMessage("3 day streak! +50 bonus XP!");
+        else if (s === 7) setStreakMessage("7 day streak! +150 bonus XP!");
+        else setStreakMessage(`${s} day streak!`);
 
         if (streakTimer.current) clearTimeout(streakTimer.current);
         streakTimer.current = setTimeout(() => setStreakMessage(null), 4000);
       }
 
-      await fetchProfile(user.id);
+      await fetchProfile();
     }
 
     setProcessing(null);
@@ -147,30 +129,21 @@ export default function DashboardPage() {
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
         <div className="text-center space-y-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent mx-auto" />
-          <p className="text-zinc-400 text-sm">Loading dashboard...</p>
+          <p className="text-zinc-400 text-sm">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!user || !profile) return null;
+  if (!profile) return null;
 
   const progress = xpProgress(profile.xp);
   const allDone = completed.comic && completed.reading && completed.listening;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0a0a0f]">
-      <header className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+      <header className="flex items-center justify-center border-b border-zinc-800 px-6 py-4">
         <h1 className="text-xl font-bold text-white">Solo Leveling</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-zinc-400 hidden sm:inline">{user.email}</span>
-          <button
-            onClick={handleLogout}
-            className="rounded-xl bg-zinc-800 px-4 py-2 text-sm text-zinc-300 transition-all hover:bg-zinc-700 hover:text-white"
-          >
-            Sign Out
-          </button>
-        </div>
       </header>
 
       <main className="flex flex-1 flex-col items-center px-4 sm:px-6 py-8 sm:py-10">
