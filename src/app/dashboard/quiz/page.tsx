@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { fetchUserQuizzes, deleteQuiz, type Quiz } from "@/lib/quiz";
+import { fetchUserQuizzes, deleteQuiz, shareQuiz, type Quiz } from "@/lib/quiz";
 import QuizCard from "@/components/QuizCard";
 
 export default function QuizHubPage() {
@@ -30,6 +30,18 @@ export default function QuizHubPage() {
     if (!confirm("Delete this quiz?")) return;
     await deleteQuiz(quizId);
     setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
+  };
+
+  const handleTogglePublic = async (quiz: Quiz) => {
+    const nextState = !quiz.is_public;
+    const { error } = await shareQuiz(quiz.id, nextState);
+    if (error) {
+      alert(`Failed to update status: ${error}`);
+      return;
+    }
+    setQuizzes((prev) =>
+      prev.map((q) => (q.id === quiz.id ? { ...q, is_public: nextState } : q))
+    );
   };
 
   if (loading) {
@@ -114,6 +126,7 @@ export default function QuizHubPage() {
                 quiz={quiz}
                 onClick={() => router.push(`/dashboard/quiz/${quiz.id}`)}
                 onDelete={() => handleDelete(quiz.id)}
+                onTogglePublic={() => handleTogglePublic(quiz)}
               />
             ))}
           </div>

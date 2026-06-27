@@ -11,6 +11,8 @@ export interface Quiz {
   title: string;
   description: string;
   time_per_question: number;
+  is_public: boolean;
+  copied_from_id: string | null;
   created_at: string;
   question_count?: number;
   best_score?: number | null;
@@ -276,4 +278,84 @@ export async function fetchQuizAttempts(
 export async function deleteQuiz(quizId: string): Promise<{ error: string | null }> {
   const { error } = await supabase.from("quizzes").delete().eq("id", quizId);
   return { error: error?.message || null };
+}
+
+// ============================================
+// Share Quiz
+// ============================================
+
+export async function shareQuiz(
+  quizId: string,
+  isPublic: boolean
+): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from("quizzes")
+    .update({ is_public: isPublic })
+    .eq("id", quizId);
+
+  return { error: error?.message || null };
+}
+
+// ============================================
+// Copy Quiz ("Buku Salinan")
+// ============================================
+
+export async function copyQuiz(
+  sourceQuizId: string,
+  targetUserId: string
+): Promise<{ quizId: string | null; error: string | null }> {
+  const { data: sourceQuiz, error: fetchQError } = await supabase
+    .from("quizzes")
+    .select("*")
+    .eq("id", sourceQuizId)
+    .single();
+
+  if (fetchQError || !sourceQuiz) {
+    return { quizId: null, error: fetchQError?.message || "Source quiz not found" };
+  }
+
+  const { data: sourceQuestions, error: fetchQsError } = await supabase
+    .from("quiz_questions")
+    .select("*")
+    .eq("quiz_id", sourceQuizId);
+
+  if (fetchQsError || !sourceQuestions) {
+    return { quizId: null, error: fetchQsError?.message || "Source questions not found" };
+  }
+
+  const { data: newQuiz, error: insertQError } = await supabase
+    .from("quizzes")
+    .insert({
+      user_id: targetUserId,
+      title: `${sourceQuiz.title} (Copy)`,
+      description: sourceQuiz.description ?? "",
+      time_per_question: sourceQuiz.time_per_question,
+      is_public: false,
+      copied_from_id: sourceQuiz.id,
+    })
+    .select("id")
+    .single();
+
+  if (insertQError || !newQuiz) {
+    return { quizId: null, error: insertQError?.message || "Failed to copy quiz" };
+  }
+
+  const questionRows = sourceQuestions.map((q) => ({
+    quiz_id: newQuiz.id,
+    question_text: q.question_text,
+    options: q.options,
+    correct_index: q.correct_index,
+    sort_order: q.sort_order,
+  }));
+
+  const { error: insertQsError } = await supabase
+    .from("quiz_questions")
+    .insert(questionRows);
+
+  if (insertQsError) {
+    await supabase.from("quizzes").delete().eq("id", newQuiz.id);
+    return { quizId: null, error: insertQsError.message };
+  }
+
+  return { quizId: newQuiz.id, error: null };
 }

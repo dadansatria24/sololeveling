@@ -16,6 +16,9 @@ export interface SkillNode {
   tier: number;
   sort_order: number;
   times_completed: number;
+  is_public: boolean;
+  is_unlocked: boolean;
+  copied_from_id: string | null;
   created_at: string;
 }
 
@@ -35,6 +38,7 @@ export interface NewNodeInput {
   tier: number;
   sort_order?: number;
   parent_id?: string | null;
+  is_unlocked?: boolean;
 }
 
 export interface UpdateNodeInput {
@@ -45,6 +49,8 @@ export interface UpdateNodeInput {
   tier?: number;
   sort_order?: number;
   parent_id?: string | null;
+  is_unlocked?: boolean;
+  is_public?: boolean;
 }
 
 // ============================================
@@ -86,16 +92,20 @@ export async function completeNode(
     timesCompleted: number;
   } | null;
 }> {
-  // 1. Fetch the node to get XP reward
+  // 1. Fetch the node to get XP reward and lock status
   const { data: node, error: nodeError } = await supabase
     .from("skill_nodes")
-    .select("xp_reward, times_completed")
+    .select("xp_reward, times_completed, is_unlocked")
     .eq("id", nodeId)
-    .eq("user_id", userId)
     .single();
 
   if (nodeError || !node) {
     return { error: "Node not found", data: null };
+  }
+
+  // Guard against locked nodes (for mentor-guided students)
+  if (!node.is_unlocked) {
+    return { error: "This skill node is currently locked by your mentor", data: null };
   }
 
   const xpGained = node.xp_reward;
@@ -179,6 +189,7 @@ export async function addNode(
       tier: input.tier,
       sort_order: input.sort_order ?? 0,
       parent_id: input.parent_id ?? null,
+      is_unlocked: input.is_unlocked ?? true,
     })
     .select()
     .single();
@@ -216,6 +227,92 @@ export async function deleteNode(
 
   if (error) {
     return { error: error.message };
+  }
+
+  return { error: null };
+}
+
+// ============================================
+// Share / Unshare tree
+// ============================================
+
+export async function shareUserTree(
+  userId: string,
+  isPublic: boolean
+): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from("skill_nodes")
+    .update({ is_public: isPublic })
+    .eq("user_id", userId);
+
+  return { error: error?.message || null };
+}
+
+// ============================================
+// Copy public tree ("Buku Salinan")
+// ============================================
+
+export async function copyTreeFromUser(
+  sourceUserId: string,
+  targetUserId: string
+): Promise<{ error: string | null }> {
+  // 1. Fetch public source tree
+  const { data: sourceNodes, error: fetchError } = await supabase
+    .from("skill_nodes")
+    .select("*")
+    .eq("user_id", sourceUserId);
+
+  if (fetchError || !sourceNodes || sourceNodes.length === 0) {
+    return { error: fetchError?.message || "Source nodes not found or empty" };
+  }
+
+  // Clear existing tree first
+  await supabase.from("skill_nodes").delete().eq("user_id", targetUserId);
+
+  const nodeMappings: Record<string, string> = {};
+
+  // 2. Copy nodes with parent_id = null first
+  for (const node of sourceNodes) {
+    const { data: newNode, error: insertError } = await supabase
+      .from("skill_nodes")
+      .insert({
+        user_id: targetUserId,
+        title: node.title,
+        description: node.description,
+        icon: node.icon,
+        xp_reward: node.xp_reward,
+        tier: node.tier,
+        sort_order: node.sort_order,
+        is_public: false, // target copy is private by default
+        is_unlocked: true, // auto unlock for the copier
+        copied_from_id: node.id,
+        parent_id: null,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !newNode) {
+      return { error: insertError?.message || "Failed to copy node" };
+    }
+
+    nodeMappings[node.id] = newNode.id;
+  }
+
+  // 3. Resolve parent relationships in copy
+  for (const node of sourceNodes) {
+    if (node.parent_id && nodeMappings[node.parent_id]) {
+      const targetNodeId = nodeMappings[node.id];
+      const targetParentId = nodeMappings[node.parent_id];
+
+      const { error: updateError } = await supabase
+        .from("skill_nodes")
+        .update({ parent_id: targetParentId })
+        .eq("id", targetNodeId);
+
+      if (updateError) {
+        return { error: updateError.message };
+      }
+    }
   }
 
   return { error: null };

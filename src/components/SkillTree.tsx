@@ -68,6 +68,7 @@ export default function SkillTree({
                   timesCompleted={node.times_completed}
                   loading={processing === node.id}
                   editMode={editMode}
+                  isUnlocked={node.is_unlocked}
                   onClick={() => onComplete(node)}
                   onEdit={() => onEdit(node)}
                 />

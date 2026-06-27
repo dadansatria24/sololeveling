@@ -6,9 +6,10 @@ interface QuizCardProps {
   quiz: Quiz;
   onClick: () => void;
   onDelete: () => void;
+  onTogglePublic: () => void;
 }
 
-export default function QuizCard({ quiz, onClick, onDelete }: QuizCardProps) {
+export default function QuizCard({ quiz, onClick, onDelete, onTogglePublic }: QuizCardProps) {
   const questionCount = quiz.question_count ?? 0;
   const hasBest = quiz.best_score !== null && quiz.best_score !== undefined;
   const date = new Date(quiz.created_at).toLocaleDateString("id-ID", {
@@ -36,12 +37,26 @@ export default function QuizCard({ quiz, onClick, onDelete }: QuizCardProps) {
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <h3
-            className="text-base font-bold truncate"
-            style={{ color: "var(--foreground)" }}
-          >
-            {quiz.title}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3
+              className="text-base font-bold truncate"
+              style={{ color: "var(--foreground)" }}
+            >
+              {quiz.title}
+            </h3>
+            {quiz.is_public && (
+              <span
+                className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded"
+                style={{
+                  background: "rgba(34, 197, 94, 0.15)",
+                  color: "#4ade80",
+                  border: "1px solid rgba(34, 197, 94, 0.3)",
+                }}
+              >
+                Public
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 mt-2">
             <span className="text-xs font-semibold" style={{ color: "var(--steel-500)" }}>
               {questionCount} questions
@@ -57,7 +72,7 @@ export default function QuizCard({ quiz, onClick, onDelete }: QuizCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Best score badge */}
           {hasBest && (
             <div
@@ -75,6 +90,19 @@ export default function QuizCard({ quiz, onClick, onDelete }: QuizCardProps) {
               </p>
             </div>
           )}
+
+          {/* Share toggle */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePublic();
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg text-sm"
+            style={{ color: quiz.is_public ? "#4ade80" : "var(--steel-600)" }}
+            title={quiz.is_public ? "Make Private" : "Share to Library"}
+          >
+            {quiz.is_public ? "🌐" : "🔗"}
+          </button>
 
           {/* Delete button */}
           <button

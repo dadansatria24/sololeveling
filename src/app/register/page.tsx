@@ -60,7 +60,7 @@ export default function RegisterPage() {
     }
 
     if (data.session) {
-      router.push("/dashboard");
+      router.push("/onboarding");
     } else if (data.user) {
       setSuccess(true);
     }

@@ -21,6 +21,9 @@ import NodeEditor from "@/components/NodeEditor";
 interface Profile {
   xp: number;
   level: number;
+  display_name: string | null;
+  is_guided: boolean;
+  role: string;
 }
 
 export default function DashboardPage() {
@@ -66,7 +69,7 @@ export default function DashboardPage() {
         // Fetch profile
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("xp, level")
+          .select("xp, level, display_name, is_guided, role")
           .eq("id", user.id)
           .single();
 
@@ -76,10 +79,24 @@ export default function DashboardPage() {
           return;
         }
 
+        // Mentor → redirect to mentor dashboard
+        if (profileData.role === "mentor") {
+          router.replace("/dashboard/mentor");
+          return;
+        }
+
+        // Onboarding check → redirect if no display_name
+        if (!profileData.display_name) {
+          router.replace("/onboarding");
+          return;
+        }
+
         setProfile(profileData);
 
-        // Seed tree if user has no nodes (for existing users before v2)
-        await seedTreeIfEmpty(user.id);
+        // Seed tree if user has no nodes and is NOT guided
+        if (!profileData.is_guided) {
+          await seedTreeIfEmpty(user.id);
+        }
 
         // Fetch skill tree
         const { nodes: treeNodes, error: treeError } = await fetchUserTree(user.id);
@@ -117,7 +134,7 @@ export default function DashboardPage() {
     if (!userId) return;
     const { data } = await supabase
       .from("profiles")
-      .select("xp, level")
+      .select("xp, level, display_name, is_guided, role")
       .eq("id", userId)
       .single();
     if (data) setProfile(data);
@@ -193,6 +210,8 @@ export default function DashboardPage() {
     icon: string;
     xp_reward: number;
     tier: number;
+    is_unlocked?: boolean;
+    is_public?: boolean;
   }) => {
     if (!userId) return;
 
@@ -256,6 +275,7 @@ export default function DashboardPage() {
 
   const progress = xpProgress(profile.xp);
   const rankName = RANK_NAMES[profile.level] || `Rank ${profile.level}`;
+  const isGuided = profile.is_guided;
   const totalCompletions = nodes.reduce((sum, n) => sum + n.times_completed, 0);
 
   return (
@@ -328,19 +348,21 @@ export default function DashboardPage() {
             <span className="hud-stat__label">Rank</span>
           </div>
 
-          {/* Edit toggle */}
-          <button
-            onClick={() => setEditMode(!editMode)}
-            className="text-xs font-semibold px-3 py-2 rounded-lg transition-all"
-            style={{
-              color: editMode ? "var(--bg-deep)" : "var(--energy-300)",
-              background: editMode ? "var(--energy-400)" : "transparent",
-              border: `1px solid ${editMode ? "var(--energy-300)" : "var(--steel-700)"}`,
-              boxShadow: editMode ? "0 0 8px var(--energy-glow)" : "none",
-            }}
-          >
-            {editMode ? "Done" : "Edit"}
-          </button>
+          {/* Edit toggle (hidden for guided students) */}
+          {!isGuided && (
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="text-xs font-semibold px-3 py-2 rounded-lg transition-all"
+              style={{
+                color: editMode ? "var(--bg-deep)" : "var(--energy-300)",
+                background: editMode ? "var(--energy-400)" : "transparent",
+                border: `1px solid ${editMode ? "var(--energy-300)" : "var(--steel-700)"}`,
+                boxShadow: editMode ? "0 0 8px var(--energy-glow)" : "none",
+              }}
+            >
+              {editMode ? "Done" : "Edit"}
+            </button>
+          )}
 
           {/* Quiz Arena */}
           <Link
@@ -353,6 +375,19 @@ export default function DashboardPage() {
             }}
           >
             ⚔️ Quiz
+          </Link>
+
+          {/* Public Library */}
+          <Link
+            href="/dashboard/library"
+            className="text-xs font-semibold px-3 py-2 rounded-lg transition-all"
+            style={{
+              color: "var(--energy-300)",
+              border: "1px solid var(--steel-700)",
+              background: "rgba(139, 92, 246, 0.06)",
+            }}
+          >
+            📚 Library
           </Link>
           {/* Logout */}
           <button

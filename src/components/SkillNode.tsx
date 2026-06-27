@@ -9,6 +9,7 @@ interface SkillNodeProps {
   timesCompleted: number;
   loading: boolean;
   editMode: boolean;
+  isUnlocked?: boolean;
   onClick: () => void;
   onEdit: () => void;
 }
@@ -20,6 +21,7 @@ export default function SkillNode({
   timesCompleted,
   loading,
   editMode,
+  isUnlocked = true,
   onClick,
   onEdit,
 }: SkillNodeProps) {
@@ -37,19 +39,47 @@ export default function SkillNode({
   }, [timesCompleted]);
 
   const hasCompleted = timesCompleted > 0;
+  const isLocked = !isUnlocked && !editMode;
+
+  const nodeStateClass = isLocked
+    ? "skill-node--locked"
+    : `skill-node--available ${hasCompleted ? "skill-node--completed" : ""}`;
 
   return (
     <button
-      className={`skill-node skill-node--available ${hasCompleted ? "skill-node--completed" : ""} ${activating ? "skill-node--activating" : ""}`}
+      className={`skill-node ${nodeStateClass} ${activating ? "skill-node--activating" : ""}`}
       onClick={editMode ? onEdit : onClick}
-      disabled={loading && !editMode}
-      aria-label={`${label} — ${timesCompleted}x completed, +${xp} XP`}
+      disabled={isLocked || (loading && !editMode)}
+      aria-label={`${label} — ${timesCompleted}x completed, +${xp} XP ${!isUnlocked ? "(Locked)" : ""}`}
     >
       <div className="skill-node__circle">
         {loading ? (
           <div className="spinner-warrior" style={{ width: 28, height: 28, borderWidth: 2 }} />
         ) : (
           <span className="skill-node__icon">{icon}</span>
+        )}
+
+        {/* Lock indicator overlay */}
+        {!isUnlocked && (
+          <span
+            style={{
+              position: "absolute",
+              top: -4,
+              left: -4,
+              width: 22,
+              height: 22,
+              borderRadius: "50%",
+              background: "var(--steel-900)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              border: "1px solid var(--steel-700)",
+              boxShadow: "0 0 6px rgba(0,0,0,0.5)",
+            }}
+          >
+            🔒
+          </span>
         )}
 
         {/* Times completed badge */}

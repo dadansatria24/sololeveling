@@ -12,9 +12,12 @@ interface NodeEditorProps {
     icon: string;
     xp_reward: number;
     tier: number;
+    is_unlocked?: boolean;
+    is_public?: boolean;
   }) => void;
   onDelete: (() => void) | null;
   onClose: () => void;
+  isMentor?: boolean;
 }
 
 const EMOJI_OPTIONS = [
@@ -30,12 +33,15 @@ export default function NodeEditor({
   onSave,
   onDelete,
   onClose,
+  isMentor = false,
 }: NodeEditorProps) {
   const [title, setTitle] = useState(node?.title ?? "");
   const [description, setDescription] = useState(node?.description ?? "");
   const [icon, setIcon] = useState(node?.icon ?? "📖");
   const [xpReward, setXpReward] = useState(node?.xp_reward ?? 10);
   const [tier, setTier] = useState(node?.tier ?? defaultTier);
+  const [isUnlocked, setIsUnlocked] = useState(node?.is_unlocked ?? true);
+  const [isPublic, setIsPublic] = useState(node?.is_public ?? false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -49,7 +55,15 @@ export default function NodeEditor({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onSave({ title: title.trim(), description: description.trim(), icon, xp_reward: xpReward, tier });
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      icon,
+      xp_reward: xpReward,
+      tier,
+      is_unlocked: isUnlocked,
+      is_public: isPublic,
+    });
   };
 
   const isEditing = node !== null;
@@ -203,7 +217,41 @@ export default function NodeEditor({
                 <option value={5}>5 — Upper-Intermediate</option>
                 <option value={6}>6 — IELTS Prep</option>
               </select>
-            </div>
+          </div>
+
+          {/* Toggles */}
+          <div className="space-y-3 pt-1">
+            {/* Unlocked toggle (mentor only) */}
+            {isMentor && (
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isUnlocked}
+                  onChange={(e) => setIsUnlocked(e.target.checked)}
+                  className="rounded w-4 h-4 border-zinc-700 bg-zinc-900 text-purple-600 focus:ring-0"
+                  style={{ accentColor: "var(--energy-500)" }}
+                />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--gold-300)" }}>
+                  Unlocked for student (Ready to grind)
+                </span>
+              </label>
+            )}
+
+            {/* Public template toggle */}
+            {!isMentor && (
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="rounded w-4 h-4 border-zinc-700 bg-zinc-900 text-purple-600 focus:ring-0"
+                  style={{ accentColor: "var(--energy-500)" }}
+                />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--steel-400)" }}>
+                  Share as Public Template
+                </span>
+              </label>
+            )}
           </div>
 
           {/* Actions */}
