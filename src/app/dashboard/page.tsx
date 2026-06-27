@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { xpProgress, RANK_NAMES } from "@/lib/level";
 import {
@@ -341,6 +342,18 @@ export default function DashboardPage() {
             {editMode ? "Done" : "Edit"}
           </button>
 
+          {/* Quiz Arena */}
+          <Link
+            href="/dashboard/quiz"
+            className="text-xs font-semibold px-3 py-2 rounded-lg transition-all"
+            style={{
+              color: "var(--gold-300)",
+              border: "1px solid var(--gold-700)",
+              background: "rgba(245, 183, 49, 0.06)",
+            }}
+          >
+            ⚔️ Quiz
+          </Link>
           {/* Logout */}
           <button
             onClick={handleLogout}
