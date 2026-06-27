@@ -51,7 +51,7 @@ export default function RegisterPage() {
     });
 
     if (signUpError) {
-      const msg = signUpError.message || signUpError.error_description || JSON.stringify(signUpError) || "Registration failed.";
+      const msg = signUpError.message || "Registration failed.";
       setError(msg.includes("already registered") || msg.includes("already been registered")
         ? "This email is already registered. Try signing in instead."
         : msg);
