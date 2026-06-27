@@ -71,7 +71,8 @@ body {
   background:
     radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse at 50% 100%, rgba(245, 183, 49, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.6) 100%),
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.7) 100%),
+    rgba(0, 0, 0, 0.5),
     url("/image/bg1.png") center/cover no-repeat;
 }
 

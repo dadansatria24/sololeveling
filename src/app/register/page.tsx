@@ -81,7 +81,7 @@ export default function RegisterPage() {
     <div
       className="flex min-h-screen items-center justify-center px-4"
       style={{
-        background: "radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%), url('/image/bg3.webp') center/cover no-repeat",
+        background: "rgba(0,0,0,0.7), url('/image/bg3.webp') center/cover no-repeat",
       }}
     >
         <div className="w-full max-w-md text-center space-y-6">
@@ -105,7 +105,7 @@ export default function RegisterPage() {
     <div
       className="flex min-h-screen items-center justify-center px-4"
       style={{
-        background: "radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%), url('/image/bg3.webp') center/cover no-repeat",
+        background: "rgba(0,0,0,0.7), url('/image/bg3.webp') center/cover no-repeat",
       }}
     >
       <div className="w-full max-w-md space-y-8">

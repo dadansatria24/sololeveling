@@ -49,8 +49,9 @@ export default function LoginPage() {
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
-      </div>
+      <div
+        className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
+      />
     );
   }
 
@@ -58,7 +59,7 @@ export default function LoginPage() {
     <div
       className="flex min-h-screen items-center justify-center px-4"
       style={{
-        background: "radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%), url('/image/bg2.webp') center/cover no-repeat",
+        background: "rgba(0,0,0,0.7), url('/image/bg2.webp') center/cover no-repeat",
       }}
     >
       <div className="w-full max-w-md space-y-8">
