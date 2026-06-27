@@ -217,6 +217,7 @@ export default function NodeEditor({
                 <option value={5}>5 — Upper-Intermediate</option>
                 <option value={6}>6 — IELTS Prep</option>
               </select>
+            </div>
           </div>
 
           {/* Toggles */}
