@@ -51,7 +51,10 @@ export default function RegisterPage() {
     });
 
     if (signUpError) {
-      setError(signUpError.message || "Registration failed. Please try again.");
+      const msg = signUpError.message || signUpError.error_description || JSON.stringify(signUpError) || "Registration failed.";
+      setError(msg.includes("already registered") || msg.includes("already been registered")
+        ? "This email is already registered. Try signing in instead."
+        : msg);
       setLoading(false);
       return;
     }
