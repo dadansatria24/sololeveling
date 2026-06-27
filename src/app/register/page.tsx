@@ -102,7 +102,12 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] px-4">
+    <div
+      className="flex min-h-screen items-center justify-center px-4"
+      style={{
+        background: "radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%), url('/image/bg3.webp') center/cover no-repeat",
+      }}
+    >
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-white">
