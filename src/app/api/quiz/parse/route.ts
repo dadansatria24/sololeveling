@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const quizSchema = {
+import type { Schema } from "@google/generative-ai";
+
+const quizSchema: Schema = {
   type: SchemaType.ARRAY,
   description: "A list of multiple-choice quiz questions",
   items: {
