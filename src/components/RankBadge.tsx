@@ -1,13 +1,6 @@
 "use client";
 
-const RANK_NAMES: Record<number, string> = {
-  1: "Recruit",
-  2: "Knight-Errant",
-  3: "Adept",
-  4: "Expert",
-  5: "Master",
-  6: "Musou",
-};
+import { RANK_NAMES } from "@/lib/level";
 
 interface RankBadgeProps {
   level: number;
@@ -33,14 +26,12 @@ export default function RankBadge({ level, totalXP, progress }: RankBadgeProps) 
               <stop offset="100%" stopColor="var(--energy-300)" />
             </linearGradient>
           </defs>
-          {/* Track */}
           <circle
             className="rank-badge__progress-track"
             cx="60"
             cy="60"
             r={radius}
           />
-          {/* Fill */}
           <circle
             className="rank-badge__progress-fill"
             cx="60"
@@ -50,19 +41,15 @@ export default function RankBadge({ level, totalXP, progress }: RankBadgeProps) 
             strokeDashoffset={dashoffset}
           />
         </svg>
-
-        {/* Level Number (centered) */}
         <div className="rank-badge__level">
           <span className="rank-badge__level-number">{level}</span>
         </div>
       </div>
 
-      {/* Rank Title */}
       <h2 className="rank-badge__rank-title font-[family-name:var(--font-cinzel)]">
         {rankName}
       </h2>
 
-      {/* XP Text */}
       <p
         style={{
           marginTop: 8,
@@ -72,7 +59,10 @@ export default function RankBadge({ level, totalXP, progress }: RankBadgeProps) 
           letterSpacing: 1,
         }}
       >
-        {progress.current} / {progress.needed} XP &middot; {totalXP} total
+        {progress.percent < 100
+          ? `${progress.current} / ${progress.needed} XP`
+          : "MAX RANK"}{" "}
+        &middot; {totalXP} total
       </p>
     </div>
   );

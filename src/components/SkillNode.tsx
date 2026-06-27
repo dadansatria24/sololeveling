@@ -6,44 +6,44 @@ interface SkillNodeProps {
   icon: string;
   label: string;
   xp: number;
-  state: "locked" | "available" | "completed";
+  timesCompleted: number;
   loading: boolean;
+  editMode: boolean;
   onClick: () => void;
+  onEdit: () => void;
 }
 
 export default function SkillNode({
   icon,
   label,
   xp,
-  state,
+  timesCompleted,
   loading,
+  editMode,
   onClick,
+  onEdit,
 }: SkillNodeProps) {
   const [activating, setActivating] = useState(false);
-  const prevState = useRef(state);
+  const prevCompleted = useRef(timesCompleted);
 
   useEffect(() => {
-    if (prevState.current === "available" && state === "completed") {
+    if (timesCompleted > prevCompleted.current) {
       setActivating(true);
       const timer = setTimeout(() => setActivating(false), 700);
+      prevCompleted.current = timesCompleted;
       return () => clearTimeout(timer);
     }
-    prevState.current = state;
-  }, [state]);
+    prevCompleted.current = timesCompleted;
+  }, [timesCompleted]);
 
-  const stateClass =
-    state === "completed"
-      ? "skill-node--completed"
-      : state === "available"
-        ? "skill-node--available"
-        : "skill-node--locked";
+  const hasCompleted = timesCompleted > 0;
 
   return (
     <button
-      className={`skill-node ${stateClass} ${activating ? "skill-node--activating" : ""}`}
-      onClick={onClick}
-      disabled={state !== "available" || loading}
-      aria-label={`${label} — ${state === "completed" ? "Completed" : state === "available" ? `Available, +${xp} XP` : "Locked"}`}
+      className={`skill-node skill-node--available ${hasCompleted ? "skill-node--completed" : ""} ${activating ? "skill-node--activating" : ""}`}
+      onClick={editMode ? onEdit : onClick}
+      disabled={loading && !editMode}
+      aria-label={`${label} — ${timesCompleted}x completed, +${xp} XP`}
     >
       <div className="skill-node__circle">
         {loading ? (
@@ -51,14 +51,37 @@ export default function SkillNode({
         ) : (
           <span className="skill-node__icon">{icon}</span>
         )}
-        {state === "completed" && !loading && (
-          <span className="skill-node__check">✓</span>
+
+        {/* Times completed badge */}
+        {timesCompleted > 0 && !loading && (
+          <span className="skill-node__check">{timesCompleted}</span>
+        )}
+
+        {/* Edit indicator */}
+        {editMode && (
+          <span
+            style={{
+              position: "absolute",
+              bottom: -2,
+              right: -2,
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: "var(--energy-400)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              color: "white",
+              boxShadow: "0 0 6px var(--energy-glow)",
+            }}
+          >
+            ✏️
+          </span>
         )}
       </div>
       <span className="skill-node__label">{label}</span>
-      <span className="skill-node__xp">
-        {state === "completed" ? "DONE" : `+${xp} XP`}
-      </span>
+      <span className="skill-node__xp">+{xp} XP</span>
     </button>
   );
 }

@@ -1,11 +1,36 @@
+// ============================================
+// Level System — 12 levels for grinding
+// ============================================
+
 const LEVEL_THRESHOLDS: { level: number; xp: number }[] = [
   { level: 1, xp: 0 },
   { level: 2, xp: 100 },
-  { level: 3, xp: 250 },
-  { level: 4, xp: 500 },
-  { level: 5, xp: 900 },
-  { level: 6, xp: 1500 },
+  { level: 3, xp: 300 },
+  { level: 4, xp: 600 },
+  { level: 5, xp: 1000 },
+  { level: 6, xp: 1600 },
+  { level: 7, xp: 2400 },
+  { level: 8, xp: 3500 },
+  { level: 9, xp: 5000 },
+  { level: 10, xp: 7000 },
+  { level: 11, xp: 10000 },
+  { level: 12, xp: 15000 },
 ];
+
+export const RANK_NAMES: Record<number, string> = {
+  1: "Recruit",
+  2: "Knight-Errant",
+  3: "Adept",
+  4: "Warrior",
+  5: "Expert",
+  6: "Master",
+  7: "Grandmaster",
+  8: "Warlord",
+  9: "Conqueror",
+  10: "Legend",
+  11: "Musou",
+  12: "Dynasty",
+};
 
 export function calculateLevel(xp: number): number {
   let level = 1;

@@ -1,119 +1,132 @@
 "use client";
 
-import { type ActivityType } from "@/lib/addXP";
+import type { SkillNode as SkillNodeType } from "@/lib/skillTree";
 import SkillNode from "./SkillNode";
-import RankBadge from "./RankBadge";
-
-interface QuestDef {
-  label: string;
-  activity: ActivityType;
-  xp: number;
-  icon: string;
-}
+import TierHeader from "./TierHeader";
 
 interface SkillTreeProps {
-  level: number;
-  totalXP: number;
-  progress: { current: number; needed: number; percent: number };
-  quests: QuestDef[];
-  completed: Record<ActivityType, boolean>;
-  processing: ActivityType | null;
-  onComplete: (quest: QuestDef) => void;
+  nodes: SkillNodeType[];
+  processing: string | null;
+  editMode: boolean;
+  onComplete: (node: SkillNodeType) => void;
+  onEdit: (node: SkillNodeType) => void;
+  onAddToTier: (tier: number) => void;
 }
 
 export default function SkillTree({
-  level,
-  totalXP,
-  progress,
-  quests,
-  completed,
+  nodes,
   processing,
+  editMode,
   onComplete,
+  onEdit,
+  onAddToTier,
 }: SkillTreeProps) {
-  // Layout positions for the skill tree
-  // Rank badge at top center, 3 quest nodes in a row below, connected by lines
-  const rankCx = 200;
-  const rankCy = 80;
+  // Group nodes by tier
+  const tiers = new Map<number, SkillNodeType[]>();
+  for (const node of nodes) {
+    const existing = tiers.get(node.tier) || [];
+    existing.push(node);
+    tiers.set(node.tier, existing);
+  }
 
-  // Node positions (3 nodes spread below the rank badge)
-  const nodeY = 260;
-  const nodePositions = [
-    { cx: 70, cy: nodeY },
-    { cx: 200, cy: nodeY },
-    { cx: 330, cy: nodeY },
-  ];
-
-  // Connection points (from rank badge bottom to each node top)
-  const connStartY = rankCy + 60; // bottom of rank badge
-  const connEndY = nodeY - 40; // top of node circles
+  // Sort tiers by number, and nodes within each tier by sort_order
+  const sortedTierKeys = [...tiers.keys()].sort((a, b) => a - b);
 
   return (
-    <div className="relative w-full max-w-[420px] mx-auto">
-      {/* SVG layer for connector lines */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        viewBox="0 0 400 340"
-        preserveAspectRatio="xMidYMid meet"
-        style={{ zIndex: 0 }}
-      >
-        <defs>
-          <linearGradient id="line-gradient-gold" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--gold-400)" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="var(--gold-600)" stopOpacity="0.4" />
-          </linearGradient>
-          <linearGradient id="line-gradient-energy" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--energy-400)" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="var(--energy-600)" stopOpacity="0.2" />
-          </linearGradient>
-        </defs>
+    <div className="w-full max-w-2xl mx-auto">
+      {sortedTierKeys.map((tierNum, tierIndex) => {
+        const tierNodes = tiers.get(tierNum)!;
+        tierNodes.sort((a, b) => a.sort_order - b.sort_order);
 
-        {nodePositions.map((pos, i) => {
-          const quest = quests[i];
-          const isCompleted = quest ? completed[quest.activity] : false;
-          const isAvailable = quest && !isCompleted;
+        return (
+          <div key={tierNum} className="animate-fade-in-up" style={{ animationDelay: `${tierIndex * 0.1}s`, animationFillMode: "backwards" }}>
+            {/* Tier connector line from previous tier */}
+            {tierIndex > 0 && (
+              <div className="flex justify-center py-2">
+                <div
+                  style={{
+                    width: 2,
+                    height: 32,
+                    background: "linear-gradient(180deg, var(--gold-700), var(--steel-800))",
+                    borderRadius: 1,
+                  }}
+                />
+              </div>
+            )}
 
-          // Curved path from rank badge to node
-          const midY = (connStartY + connEndY) / 2;
-          const path = `M ${rankCx} ${connStartY} C ${rankCx} ${midY}, ${pos.cx} ${midY}, ${pos.cx} ${connEndY}`;
+            {/* Tier Header */}
+            <TierHeader tier={tierNum} />
 
-          return (
-            <path
-              key={i}
-              d={path}
-              className={
-                isCompleted
-                  ? "connector-line--active"
-                  : isAvailable
-                    ? "connector-line--available"
-                    : "connector-line"
-              }
-            />
-          );
-        })}
-      </svg>
+            {/* Nodes Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5 px-2 py-3">
+              {tierNodes.map((node) => (
+                <SkillNode
+                  key={node.id}
+                  icon={node.icon}
+                  label={node.title}
+                  xp={node.xp_reward}
+                  timesCompleted={node.times_completed}
+                  loading={processing === node.id}
+                  editMode={editMode}
+                  onClick={() => onComplete(node)}
+                  onEdit={() => onEdit(node)}
+                />
+              ))}
 
-      {/* Content layer */}
-      <div className="relative" style={{ zIndex: 1 }}>
-        {/* Rank Badge — top center */}
-        <div className="flex justify-center pt-2 pb-8">
-          <RankBadge level={level} totalXP={totalXP} progress={progress} />
+              {/* Add Node button (edit mode only) */}
+              {editMode && (
+                <button
+                  onClick={() => onAddToTier(tierNum)}
+                  className="skill-node"
+                  style={{ opacity: 0.6 }}
+                >
+                  <div
+                    className="skill-node__circle"
+                    style={{
+                      borderStyle: "dashed",
+                      borderColor: "var(--energy-400)",
+                      background: "transparent",
+                    }}
+                  >
+                    <span style={{ fontSize: 28, color: "var(--energy-400)" }}>+</span>
+                  </div>
+                  <span className="skill-node__label" style={{ color: "var(--energy-400)" }}>
+                    Add Skill
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Add new tier button in edit mode */}
+      {editMode && (
+        <div className="flex justify-center py-6">
+          <button
+            onClick={() => {
+              const maxTier = sortedTierKeys.length > 0 ? sortedTierKeys[sortedTierKeys.length - 1] : 0;
+              onAddToTier(maxTier + 1);
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            style={{
+              color: "var(--energy-300)",
+              border: "1px dashed var(--energy-500)",
+              background: "rgba(139, 92, 246, 0.05)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(139, 92, 246, 0.15)";
+              e.currentTarget.style.borderColor = "var(--energy-300)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(139, 92, 246, 0.05)";
+              e.currentTarget.style.borderColor = "var(--energy-500)";
+            }}
+          >
+            + Add New Tier
+          </button>
         </div>
-
-        {/* Quest Nodes — row of 3 */}
-        <div className="flex justify-between items-start px-2 sm:px-4 pt-8">
-          {quests.map((quest) => (
-            <SkillNode
-              key={quest.activity}
-              icon={quest.icon}
-              label={quest.label}
-              xp={quest.xp}
-              state={completed[quest.activity] ? "completed" : "available"}
-              loading={processing === quest.activity}
-              onClick={() => onComplete(quest)}
-            />
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
